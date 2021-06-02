@@ -386,13 +386,6 @@ int main(int argc, char* argv[]){
     double viewMatrix[4][4];
     matrixMul(cameraRotation, cameraTranslation, viewMatrix);
 
-    for (int i=0; i<4; i++){
-        for (int j=0; j<4; j++){
-            cout << viewMatrix[i][j] << " ";
-        }
-
-        cout << endl;
-    }
 
     while (getline(stage1Read, input)){
         double points[4][4] = {0};
@@ -413,6 +406,7 @@ int main(int argc, char* argv[]){
 
         double output[4][4];
         matrixMul(viewMatrix, points, output);
+        normalize(output);
 
         for (int i=0; i<3; i++){
             for (int j=0; j<3; j++){
@@ -430,15 +424,15 @@ int main(int argc, char* argv[]){
 
 
 
-/*
 
     // Stage 3
     double fovX = fovY * aspectRatio;
-    double t = near * tan(fovY/2);
-    double r2 = near * tan(fovX/2);
+    double t = near * tan((fovY/2) * (PI / 180));
+    double r2 = near * tan((fovX/2) * (PI / 180));
 
     ofstream stage3("stage3.txt");
     ifstream stage2Read("stage2.txt");
+    stage3 << std::setprecision(7) << std::fixed;
 
     double projectionMat[4][4] = {0};
 
@@ -447,6 +441,14 @@ int main(int argc, char* argv[]){
     projectionMat[2][2] = -(far + near)/(far - near);
     projectionMat[2][3] = -(2*far*near)/(far - near);
     projectionMat[3][2] = -1;
+
+    for (int i=0; i<4; i++){
+        for (int j=0; j<4; j++){
+            cout << projectionMat[i][j] << " ";
+        }
+
+        cout << endl;
+    }
 
     while (getline(stage2Read, input)){
         double points[4][4] = {0};
@@ -460,16 +462,17 @@ int main(int argc, char* argv[]){
             for (int j = 0; j < 3; j++)
             {
                 linePoints >> points[j][i];
-                cout << points[j][i] << " " ;
+                //cout << points[j][i] << " " ;
             }
-            cout << 1 << endl ;
+            //cout << 1 << endl ;
             points[3][i] = 1;
         }
-        cout << endl;
+        //cout << endl;
         getline(stage2Read, input);
 
         double output[4][4];
-        matrixMul(viewMatrix, points, output);
+        matrixMul(projectionMat, points, output);
+        normalize(output);
 
         for (int i=0; i<3; i++){
             for (int j=0; j<3; j++){
@@ -482,7 +485,6 @@ int main(int argc, char* argv[]){
     }
 
     stage3.close();
-    */
 
 
 
