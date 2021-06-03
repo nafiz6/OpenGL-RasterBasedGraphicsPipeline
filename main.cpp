@@ -6,6 +6,12 @@
 #include <stack>
 #include <cmath>
 #include <iomanip>
+#include <vector>
+#include "bitmap_image.hpp"
+
+#include <stdlib.h>
+#include <time.h>   
+
 
 using namespace std;
 
@@ -163,21 +169,53 @@ class Stack{
         
 };
 
-int main(int argc, char* argv[]){
+class Point {
+    public:
+        double x,y,z;
+        Point(int i, int j, int k){
+            x = i;
+            y = j;
+            z = k;
+        }
 
-    double identity[4][4] = {{1,0,0,0}, {0,1,0,0},{0,0,1,0},{0,0,0,1}};
+        Point(){
+            x=0;
+            y=0;
+            z=0;
+        }
+};
 
+class Triangle {
+    public:
+        Point points[3];
+        int color[3];
+
+        Triangle(){
+            color[0] = rand() % 255 + 1;
+            color[1] = rand() % 255 + 1;
+            color[2] = rand() % 255 + 1;
+
+        }
+};
+
+vector<Triangle > triangles;
+
+fstream zBufferWrite;
+ifstream configRead("config.txt");
+
+
+double eye[4];
+double look[4];
+double up[4];
+double fovY, aspectRatio, near, far;
+
+void stage1Func(){
 
     string input;
     ifstream inputFile("scene.txt"); 
     ofstream stage1("stage1.txt");
 
     stage1 << std::setprecision(7) << std::fixed;
-
-    double eye[4];
-    double look[4];
-    double up[4];
-    double fovY, aspectRatio, near, far;
 
     getline(inputFile, input);
     int idx = 0;
@@ -338,10 +376,15 @@ int main(int argc, char* argv[]){
     inputFile.close();
     stage1.close();
 
+}
+
+void stage2Func(){
 
     // Stage 2
 
-    ofstream stage2("stage2.txt");
+    string input;
+    fstream stage2;
+    stage2.open("stage2.txt", ios::out);
     ifstream stage1Read("stage1.txt"); 
     stage2 << std::setprecision(7) << std::fixed;
 
@@ -425,13 +468,19 @@ int main(int argc, char* argv[]){
 
 
 
+}
+
+void stage3Func(){
+
     // Stage 3
+    string input;
     double fovX = fovY * aspectRatio;
     double t = near * tan((fovY/2) * (PI / 180));
     double r2 = near * tan((fovX/2) * (PI / 180));
 
     ofstream stage3("stage3.txt");
-    ifstream stage2Read("stage2.txt");
+    fstream stage2Read;
+    stage2Read.open("stage2.txt", ios::in);
     stage3 << std::setprecision(7) << std::fixed;
 
     double projectionMat[4][4] = {0};
@@ -485,13 +534,228 @@ int main(int argc, char* argv[]){
     }
 
     stage3.close();
+    stage2Read.close();
+
+
+}
+
+void stage4Func(){
+
+    string input;
+
+    ifstream stage3Read("stage3.txt");
+    zBufferWrite.open("z_buffer.txt", ios::out);
+    zBufferWrite << std::setprecision(6) << std::fixed;
+
+    double screenWidth, screenHeight, leftLim, rightLim, topLim, botLim, frontLim, rearLim;
+
+    while (getline(stage3Read, input)){
+
+
+        cout << endl;
+        Triangle triangle;
+        for (int i = 0; i < 3; i++)
+        {
+            if (i != 0)
+                getline(stage3Read, input);
+
+            stringstream linePoints(input);
+
+            linePoints >> triangle.points[i].x;
+            linePoints >> triangle.points[i].y;
+            linePoints >> triangle.points[i].z;
+
+            cout << triangle.points[i].x << " " << triangle.points[i].y << " " << triangle.points[i].z << endl;
+        }
+        cout << endl;
+
+        triangles.push_back(triangle);
+        //cout << endl;
+        getline(stage3Read, input);
+
+    }
+
+    getline(configRead, input);
+    stringstream lineNums(input);
+    lineNums >> screenWidth;
+    lineNums >> screenHeight;
+
+    bitmap_image image(screenWidth, screenHeight);
+    getline(configRead, input);
+    stringstream limXLine(input);
+    limXLine >> leftLim;
+    rightLim = leftLim * -1;
+
+    getline(configRead, input);
+    stringstream limYLine(input);
+    limYLine >> botLim;
+    topLim = botLim * -1;
+
+    getline(configRead, input);
+    stringstream limZLine(input);
+    limZLine >> frontLim;
+    limZLine >> rearLim;
+
+    cout << "STAGE 4 " << endl;
+
+
+    // allocate zBuffer with zMax
+    vector < vector < double >> zBuffer(screenHeight,vector< double > (screenHeight, rearLim));
+
+    // initialize as black
+    for (int i=0; i<screenWidth; i++){
+        for (int j=0; j<screenHeight; j++){
+            image.set_pixel(i, j, 0, 0, 0);
+        }
+    }
 
 
 
-    ofstream stage4("stage4.txt");
+    // pixel mapping
+    double dx  = (rightLim - leftLim) / screenWidth;
+    double dy  = (topLim - botLim) / screenHeight;
+
+
+    for (int k=0; k<triangles.size(); k++){
+        Triangle triangle = triangles[k];
+        double minY, maxY, minX, maxX;
+        minY = triangle.points[0].y;
+        maxY = triangle.points[0].y;
+
+        minX = triangle.points[0].x;
+        maxX = triangle.points[0].x;
+        
+
+        for (int i=0; i<3; i++){
+            minY = min(minY, triangle.points[i].y);
+            maxY = max(maxY, triangle.points[i].y);
+
+            minX = min(minX, triangle.points[i].x);
+            maxX = max(maxX, triangle.points[i].x);
+            
+            cout << triangle.points[i].x << " " << triangle.points[i].y << " " << triangle.points[i].z  << endl;
+        }
+
+        // clip
+        minY = max(botLim, minY);
+        maxY = min(topLim, maxY);
+
+        minX = max(leftLim, minX);
+        maxX = min(rightLim, maxX);
+
+
+        int minYRow = (int)((topLim - minY) / dy);
+        int maxYRow = (int)((topLim - maxY) / dy);
+
+        // Y - scanline
+        for (int i=maxYRow; i<= minYRow; i++){
+
+            double xab[2];
+            double zab[2];
+            for (int j=0; j<2; j++){
+                xab[j] = 0;
+                zab[j] = 0;
+            }
+
+            int idx = 0;
+            double ys = topLim - i * dy;
+            for (int j=0; j<3; j++){
+                int next = (j+1)%3;
+                // check which pair cuts the scanline
+                if (min(triangle.points[j].y, triangle.points[next].y) <= ys && 
+                    max(triangle.points[next].y, triangle.points[j].y) >= ys){
+                    xab[idx] = triangle.points[j].x + (triangle.points[next].x - triangle.points[j].x) * ((ys - triangle.points[j].y) / (triangle.points[next].y - triangle.points[j].y));
+                    zab[idx] = triangle.points[j].z - (triangle.points[j].z - triangle.points[next].z) * ((triangle.points[j].y - ys) / (triangle.points[j].y - triangle.points[next].y));
+                    idx++;
+                }
+                if (idx==2)break;
+            }
+
+            // clip
+            for (int j=0; j<2; j++){
+                if (xab[j] > maxX)xab[j] = maxX;
+                if (xab[j] < minX)xab[j] = minX;
+            }
+
+/*
+            double xab[2];
+            double zab[2];
+            for (int j=0; j<3; j++){
+                if (x[j] >= minX && x[j] <= maxX){
+                    xab[idx] = x[j];
+                    zab[idx] = z[j];
+                    idx++;
+                }
+                if (idx == 2)break;
+            }
+
+*/
+            double xa, xb,za,zb;
+            if (xab[0] < xab[1]){
+                xa = xab[0];
+                za = zab[0];
+
+                xb = xab[1];
+                zb = zab[1];
+            }
+            else {
+                xa = xab[1];
+                za = zab[1];
+
+                xb = xab[0];
+                zb = zab[0];
+            }
+
+            int xaRow = (int)((xa - leftLim) / dx);
+            int xbRow = (int)((xb - leftLim) / dx);
+            //cout << xaRow << " " << xbRow << endl;
+
+            for (int j=xaRow; j<=xbRow; j++){
+                double xp = leftLim + j * dx;
+                double zp = zb - (zb - za) * ((xb - xp)/(xb - xa));
+
+                if (zp < zBuffer[i][j]){
+                    zBuffer[i][j] = zp;
+                    image.set_pixel(j, i, triangle.color[0], triangle.color[1], triangle.color[2]);
+                }
+            }
+        }
+        cout << endl;
+    }
+
+
+    for (int i=0; i<screenWidth; i++){
+        for (int j=0; j<screenHeight; j++){
+            if (zBuffer[i][j] != rearLim){
+                zBufferWrite << zBuffer[i][j] << "\t";
+            }
+        }
+        zBufferWrite << endl;
+    }
+    
 
 
 
+
+
+
+    stage3Read.close();
+    configRead.close();
+    zBufferWrite.close();
+
+
+    image.save_image("out.bmp");;
+}
+
+int main(int argc, char* argv[]){
+    srand (time(NULL));
+    cout << std::setprecision(6) << std::fixed;
+
+    string input;
+    stage1Func();
+    stage2Func();
+    stage3Func();
+    stage4Func();
 
 
     
