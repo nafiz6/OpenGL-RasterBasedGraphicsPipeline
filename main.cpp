@@ -198,10 +198,6 @@ class Triangle {
         }
 };
 
-vector<Triangle > triangles;
-
-fstream zBufferWrite;
-ifstream configRead("config.txt");
 
 
 double eye[4];
@@ -211,6 +207,7 @@ double fovY, aspectRatio, near, far;
 
 void stage1Func(){
 
+    cout << "STAGE 1\n\n";
     string input;
     ifstream inputFile("scene.txt"); 
     ofstream stage1("stage1.txt");
@@ -379,6 +376,7 @@ void stage1Func(){
 }
 
 void stage2Func(){
+    cout << "STAGE 2\n\n";
 
     // Stage 2
 
@@ -471,6 +469,7 @@ void stage2Func(){
 }
 
 void stage3Func(){
+    cout << "STAGE 3\n\n";
 
     // Stage 3
     string input;
@@ -493,10 +492,10 @@ void stage3Func(){
 
     for (int i=0; i<4; i++){
         for (int j=0; j<4; j++){
-            cout << projectionMat[i][j] << " ";
+            //cout << projectionMat[i][j] << " ";
         }
 
-        cout << endl;
+        //cout << endl;
     }
 
     while (getline(stage2Read, input)){
@@ -541,6 +540,11 @@ void stage3Func(){
 
 void stage4Func(){
 
+    cout << "STAGE 4\n\n";
+    vector<Triangle> triangles;
+
+    fstream zBufferWrite;
+    ifstream configRead("config.txt");
     string input;
 
     ifstream stage3Read("stage3.txt");
@@ -549,10 +553,10 @@ void stage4Func(){
 
     double screenWidth, screenHeight, leftLim, rightLim, topLim, botLim, frontLim, rearLim;
 
-    while (getline(stage3Read, input)){
+    while (getline(stage3Read, input))
+    {
 
-
-        cout << endl;
+        //cout << endl;
         Triangle triangle;
         for (int i = 0; i < 3; i++)
         {
@@ -565,14 +569,13 @@ void stage4Func(){
             linePoints >> triangle.points[i].y;
             linePoints >> triangle.points[i].z;
 
-            cout << triangle.points[i].x << " " << triangle.points[i].y << " " << triangle.points[i].z << endl;
+            //cout << triangle.points[i].x << " " << triangle.points[i].y << " " << triangle.points[i].z << endl;
         }
-        cout << endl;
+        //cout << endl;
 
         triangles.push_back(triangle);
         //cout << endl;
         getline(stage3Read, input);
-
     }
 
     getline(configRead, input);
@@ -596,31 +599,31 @@ void stage4Func(){
     limZLine >> frontLim;
     limZLine >> rearLim;
 
-    cout << "STAGE 4 " << endl;
-
+    //cout << "STAGE 4 " << endl;
 
     // allocate zBuffer with zMax
-    vector < vector < double >> zBuffer(screenHeight,vector< double > (screenHeight, rearLim));
+    vector<vector<double>> zBuffer(screenHeight, vector<double>(screenHeight, rearLim));
 
     // initialize as black
-    for (int i=0; i<screenWidth; i++){
-        for (int j=0; j<screenHeight; j++){
+    for (int i = 0; i < screenWidth; i++)
+    {
+        for (int j = 0; j < screenHeight; j++)
+        {
             image.set_pixel(i, j, 0, 0, 0);
         }
     }
 
-
-
     // pixel mapping
-    double dx  = (rightLim - leftLim) / screenWidth;
-    double dy  = (topLim - botLim) / screenHeight;
+    double dx = (rightLim - leftLim) / screenWidth;
+    double dy = (topLim - botLim) / screenHeight;
 
-    double Top_Y = topLim - dy/2.0;
-    double Bot_Y = botLim + dy/2.0;
-    double Left_X = leftLim + dx/2.0;
-    double Right_X = rightLim - dx/2.0;
+    double Top_Y = topLim - dy / 2.0;
+    double Bot_Y = botLim + dy / 2.0;
+    double Left_X = leftLim + dx / 2.0;
+    double Right_X = rightLim - dx / 2.0;
 
-    for (int k=0; k<triangles.size(); k++){
+    for (int k = 0; k < triangles.size(); k++)
+    {
         Triangle triangle = triangles[k];
         double minY, maxY, minX, maxX;
         minY = triangle.points[0].y;
@@ -628,15 +631,15 @@ void stage4Func(){
 
         minX = triangle.points[0].x;
         maxX = triangle.points[0].x;
-        
 
-        for (int i=0; i<3; i++){
+        for (int i = 0; i < 3; i++)
+        {
             minY = min(minY, triangle.points[i].y);
             maxY = max(maxY, triangle.points[i].y);
 
             minX = min(minX, triangle.points[i].x);
             maxX = max(maxX, triangle.points[i].x);
-            
+
             //cout << triangle.points[i].x << " " << triangle.points[i].y << " " << triangle.points[i].z  << endl;
         }
 
@@ -647,68 +650,100 @@ void stage4Func(){
         minX = max(Left_X, minX);
         maxX = min(Right_X, maxX);
 
-
         int minYRow = round((Top_Y - minY) / dy);
         int maxYRow = round((Top_Y - maxY) / dy);
 
         //cout << minYRow << " " << maxYRow << endl;
 
         // Y - scanline
-        for (int i=maxYRow; i<= minYRow; i++){
+        for (int i = maxYRow; i <= minYRow; i++)
+        {
 
             double xab[2];
             double zab[2];
-            for (int j=0; j<2; j++){
+            for (int j = 0; j < 2; j++)
+            {
                 xab[j] = 0;
                 zab[j] = 0;
             }
 
             int idx = 0;
             double ys = Top_Y - i * dy;
-            for (int j=0; j<3; j++){
-                int next = (j+1)%3;
+            for (int j = 0; j < 3; j++)
+            {
+                int next = (j + 1) % 3;
                 // check which pair cuts the scanline
-                if (min(triangle.points[j].y, triangle.points[next].y) <= ys && 
-                    max(triangle.points[next].y, triangle.points[j].y) >= ys && triangle.points[next].y != triangle.points[j].y){
+                if (min(triangle.points[j].y, triangle.points[next].y) <= ys &&
+                    max(triangle.points[next].y, triangle.points[j].y) >= ys && triangle.points[next].y != triangle.points[j].y)
+                {
                     xab[idx] = triangle.points[j].x - (triangle.points[j].x - triangle.points[next].x) * ((triangle.points[j].y - ys) / (triangle.points[j].y - triangle.points[next].y));
                     zab[idx] = triangle.points[j].z - (triangle.points[j].z - triangle.points[next].z) * ((triangle.points[j].y - ys) / (triangle.points[j].y - triangle.points[next].y));
                     idx++;
                 }
-                if (idx==2)break;
+                if (idx == 2)
+                    break;
             }
+
+            double unClippedXab[2];
+            double unClippedZab[2];
+
+            unClippedXab[0] = xab[0];
+            unClippedXab[1] = xab[1];
+
+            unClippedZab[0] = zab[0];
+            unClippedZab[1] = zab[1];
 
             // clip
-            for (int j=0; j<2; j++){
-                if (xab[j] > maxX)xab[j] = maxX;
-                if (xab[j] < minX)xab[j] = minX;
+            for (int j = 0; j < 2; j++)
+            {
+                if (xab[j] > maxX){
+                    xab[j] = maxX;
+                }
+                if (xab[j] < minX){
+                    xab[j] = minX;
+                }
             }
 
-            double xa, xb,za,zb;
-            if (xab[0] < xab[1]){
+            zab[0] = unClippedZab[1] - (unClippedZab[1] - unClippedZab[0]) * ((unClippedXab[1] - xab[0])/ (unClippedXab[1] - unClippedXab[0]));
+            zab[1] = unClippedZab[1] - (unClippedZab[1] - unClippedZab[0]) * ((unClippedXab[1] - xab[1])/ (unClippedXab[1] - unClippedXab[0]));
+
+            double xa, xb, za, zb;
+            if (xab[0] < xab[1])
+            {
                 xa = xab[0];
                 za = zab[0];
 
                 xb = xab[1];
                 zb = zab[1];
             }
-            else {
+            else
+            {
                 xa = xab[1];
                 za = zab[1];
 
                 xb = xab[0];
                 zb = zab[0];
+
+                double temp = unClippedXab[1];
+                unClippedXab[1] = unClippedXab[0];
+                unClippedXab[0] = temp;
             }
 
             int xaRow = round((xa - Left_X) / dx);
             int xbRow = round((xb - Left_X) / dx);
-            //cout << xaRow << " " << xbRow << endl;
 
-            for (int j=xaRow; j<=xbRow; j++){
+            //xa = unClippedXab[0];
+            //xb = unClippedXab[1];
+
+            for (int j = xaRow; j <= xbRow; j++)
+            {
                 double xp = Left_X + j * dx;
-                double zp = zb - (zb - za) * ((xb - xp)/(xb - xa));
-                if (zp < frontLim)continue;
+                double zp = zb - (zb - za) * ((xb - xp) / (xb - xa));
+                if (zp < frontLim)
+                    continue;
 
-                if (zp < zBuffer[i][j]){
+                if (zp < zBuffer[i][j])
+                {
                     zBuffer[i][j] = zp;
                     image.set_pixel(j, i, triangle.color[0], triangle.color[1], triangle.color[2]);
                 }
@@ -717,28 +752,24 @@ void stage4Func(){
         //cout << endl;
     }
 
-
-    for (int i=0; i<screenWidth; i++){
-        for (int j=0; j<screenHeight; j++){
-            if (zBuffer[i][j] != rearLim){
+    for (int i = 0; i < screenWidth; i++)
+    {
+        for (int j = 0; j < screenHeight; j++)
+        {
+            if (zBuffer[i][j] != rearLim)
+            {
                 zBufferWrite << zBuffer[i][j] << "\t";
             }
         }
         zBufferWrite << endl;
     }
-    
-
-
-
-
-
 
     stage3Read.close();
     configRead.close();
     zBufferWrite.close();
 
-
-    image.save_image("out.bmp");;
+    image.save_image("out.bmp");
+    ;
 }
 
 int main(int argc, char* argv[]){
