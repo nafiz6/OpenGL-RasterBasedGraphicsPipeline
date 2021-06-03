@@ -615,6 +615,10 @@ void stage4Func(){
     double dx  = (rightLim - leftLim) / screenWidth;
     double dy  = (topLim - botLim) / screenHeight;
 
+    double Top_Y = topLim - dy/2.0;
+    double Bot_Y = botLim + dy/2.0;
+    double Left_X = leftLim + dx/2.0;
+    double Right_X = rightLim - dx/2.0;
 
     for (int k=0; k<triangles.size(); k++){
         Triangle triangle = triangles[k];
@@ -633,19 +637,21 @@ void stage4Func(){
             minX = min(minX, triangle.points[i].x);
             maxX = max(maxX, triangle.points[i].x);
             
-            cout << triangle.points[i].x << " " << triangle.points[i].y << " " << triangle.points[i].z  << endl;
+            //cout << triangle.points[i].x << " " << triangle.points[i].y << " " << triangle.points[i].z  << endl;
         }
 
         // clip
-        minY = max(botLim, minY);
-        maxY = min(topLim, maxY);
+        minY = max(Bot_Y, minY);
+        maxY = min(Top_Y, maxY);
 
-        minX = max(leftLim, minX);
-        maxX = min(rightLim, maxX);
+        minX = max(Left_X, minX);
+        maxX = min(Right_X, maxX);
 
 
-        int minYRow = (int)((topLim - minY) / dy);
-        int maxYRow = (int)((topLim - maxY) / dy);
+        int minYRow = round((Top_Y - minY) / dy);
+        int maxYRow = round((Top_Y - maxY) / dy);
+
+        //cout << minYRow << " " << maxYRow << endl;
 
         // Y - scanline
         for (int i=maxYRow; i<= minYRow; i++){
@@ -658,13 +664,13 @@ void stage4Func(){
             }
 
             int idx = 0;
-            double ys = topLim - i * dy;
+            double ys = Top_Y - i * dy;
             for (int j=0; j<3; j++){
                 int next = (j+1)%3;
                 // check which pair cuts the scanline
                 if (min(triangle.points[j].y, triangle.points[next].y) <= ys && 
-                    max(triangle.points[next].y, triangle.points[j].y) >= ys){
-                    xab[idx] = triangle.points[j].x + (triangle.points[next].x - triangle.points[j].x) * ((ys - triangle.points[j].y) / (triangle.points[next].y - triangle.points[j].y));
+                    max(triangle.points[next].y, triangle.points[j].y) >= ys && triangle.points[next].y != triangle.points[j].y){
+                    xab[idx] = triangle.points[j].x - (triangle.points[j].x - triangle.points[next].x) * ((triangle.points[j].y - ys) / (triangle.points[j].y - triangle.points[next].y));
                     zab[idx] = triangle.points[j].z - (triangle.points[j].z - triangle.points[next].z) * ((triangle.points[j].y - ys) / (triangle.points[j].y - triangle.points[next].y));
                     idx++;
                 }
@@ -677,19 +683,6 @@ void stage4Func(){
                 if (xab[j] < minX)xab[j] = minX;
             }
 
-/*
-            double xab[2];
-            double zab[2];
-            for (int j=0; j<3; j++){
-                if (x[j] >= minX && x[j] <= maxX){
-                    xab[idx] = x[j];
-                    zab[idx] = z[j];
-                    idx++;
-                }
-                if (idx == 2)break;
-            }
-
-*/
             double xa, xb,za,zb;
             if (xab[0] < xab[1]){
                 xa = xab[0];
@@ -706,13 +699,14 @@ void stage4Func(){
                 zb = zab[0];
             }
 
-            int xaRow = (int)((xa - leftLim) / dx);
-            int xbRow = (int)((xb - leftLim) / dx);
+            int xaRow = round((xa - Left_X) / dx);
+            int xbRow = round((xb - Left_X) / dx);
             //cout << xaRow << " " << xbRow << endl;
 
             for (int j=xaRow; j<=xbRow; j++){
-                double xp = leftLim + j * dx;
+                double xp = Left_X + j * dx;
                 double zp = zb - (zb - za) * ((xb - xp)/(xb - xa));
+                if (zp < frontLim)continue;
 
                 if (zp < zBuffer[i][j]){
                     zBuffer[i][j] = zp;
@@ -720,7 +714,7 @@ void stage4Func(){
                 }
             }
         }
-        cout << endl;
+        //cout << endl;
     }
 
 
